@@ -1,0 +1,28 @@
+# Secrets - never commit
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Generated outputs (calendar state, transcripts, audio, logs)
+outputs/
+*.wav
+*.mp3
+
+# Local model caches (faster-whisper, Piper voices)
+models/
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/

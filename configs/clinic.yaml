@@ -1,0 +1,52 @@
+# Synthetic clinic used by the agent. Every name, number and address here is made up.
+clinic:
+  name: Riverside Family Clinic
+  phone: "+49 30 0000 0000"        # fictional
+  address: "12 Example Street, 10115 Berlin"  # fictional
+  timezone: Europe/Berlin
+  emergency_number: "112"          # EU; the agent also mentions 911 for US callers
+
+# Opening hours per weekday (24 h clock). Missing day = closed.
+hours:
+  monday:    ["08:00", "18:00"]
+  tuesday:   ["08:00", "18:00"]
+  wednesday: ["08:00", "13:00"]
+  thursday:  ["08:00", "18:00"]
+  friday:    ["08:00", "15:00"]
+
+# Lunch break: no appointments start inside it.
+lunch_break: ["12:30", "13:30"]
+
+slot_minutes: 15          # booking grid
+booking_horizon_days: 28  # how far ahead callers can book
+
+providers:
+  - id: dr_weber
+    name: Dr. Anna Weber
+    role: General practitioner
+  - id: dr_okafor
+    name: Dr. Daniel Okafor
+    role: General practitioner
+  - id: nurse_lin
+    name: Nurse Mei Lin
+    role: Practice nurse
+
+# Appointment types: duration and which providers can do them.
+appointment_types:
+  general:
+    label: General consultation
+    minutes: 15
+    providers: [dr_weber, dr_okafor]
+  long:
+    label: Long consultation
+    minutes: 30
+    providers: [dr_weber, dr_okafor]
+  vaccination:
+    label: Vaccination
+    minutes: 15
+    providers: [nurse_lin]
+  blood_test:
+    label: Blood test
+    minutes: 15
+    providers: [nurse_lin]
+    latest_start: "10:00"   # fasting blood tests: last start 10:00

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clinic-voice-agent"
+version = "0.1.0"
+description = "AI phone receptionist for a (synthetic) clinic: Twilio Media Streams + Pipecat, Deepgram STT/TTS and Claude tool use, with guardrails and an evaluation harness."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Muhammad Haroon Khan" }]
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+cva-check-env = "clinic_voice_agent.cli:check_env_main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
