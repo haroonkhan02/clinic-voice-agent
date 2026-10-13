@@ -72,12 +72,44 @@ flowchart LR
 |---|---|
 | Clinic config (hours, providers, appointment types) + validation | ✅ |
 | Service-key check (`cva-check-env`, prints names only) | ✅ |
-| Synthetic clinic knowledge base + FAQ retriever | ⏳ |
-| Mock calendar + tool layer (book / reschedule / cancel / message) | ⏳ |
-| Guardrails (emergency, medical advice, PII redaction in logs) | ⏳ |
-| Scripted evaluation conversations | ⏳ |
+| Synthetic clinic knowledge base (25 passages) + BM25 FAQ retriever | ✅ |
+| Mock calendar: opening hours, lunch break, provider skills, double booking, identity check | ✅ |
+| 8 strict Claude tool schemas + validating executor (booking needs `caller_confirmed`) | ✅ |
+| Guardrails: emergency → 112/911 script, medical-advice refusal, PII redaction for logs | ✅ |
+| 13 scripted evaluation calls (`eval/scenarios.yaml`) | ✅ written, scored next session |
 | Claude agent, Pipecat pipeline, Twilio server | ⏳ next session |
-| Evaluation + latency report, demo | ⏳ final session |
+| Agent evaluation, latency report, demo | ⏳ final session |
+
+## Early measurements (components only)
+
+These numbers cover the building blocks, not the voice agent. Both evaluation sets were written by
+hand for this repo, so they are small and probably easier than real calls.
+
+**FAQ retrieval** (`cva-faq-eval`, 36 answerable + 4 out-of-scope caller questions →
+[`reports/faq_retrieval.md`](reports/faq_retrieval.md))
+
+| Retriever | Hit@1 | Hit@3 | MRR@3 |
+|---|---|---|---|
+| BM25 (own, title-boosted, light stemming + spoken-word synonyms) | 0.833 | 0.944 | 0.875 |
+
+The first run scored Hit@1 0.778; two tokenizer bugs (synonyms not applied to plurals, *buses* → *buse*)
+were fixed before the numbers above. A score threshold can't separate "no answer" cleanly: *"is the
+pharmacy next door open on sundays"* scores 5.75 on *Opening hours*. So the agent itself has to
+judge whether the passages answer the question.
+
+**Guardrail screening** (`cva-guardrail-eval`, 75 labelled utterances →
+[`reports/guardrails.md`](reports/guardrails.md))
+
+| Run | Accuracy | Emergency recall | Medical-advice recall | Admin requests passed |
+|---|---|---|---|---|
+| First run | 0.853 | 0.880 | 0.700 | 0.933 |
+| After fixing pattern bugs (same set, optimistic) | 0.973 | 1.000 | 1.000 | 0.933 |
+
+The first run missed *"ending my life"*, *"crushing pressure in my chest"* and *"can't move my left
+side"* because of inflection and word-order gaps. These were fixed as general pattern fixes, not one
+phrase at a time. Since they were checked on the same set, the second row is optimistic; a fresh
+held-out set comes next. The two remaining errors are false alarms: *"I had a stroke last year"* and
+*"second dose of the vaccine"*. Screening takes about 8 µs per utterance.
 
 ## Repository structure
 
@@ -85,8 +117,18 @@ flowchart LR
 clinic-voice-agent/
 ├── src/clinic_voice_agent/
 │   ├── config.py         # Paths, clinic config loader, service-key discovery
-│   └── cli.py            # cva-check-env
+│   ├── knowledge.py      # Markdown knowledge base → passages, BM25 retriever
+│   ├── scheduling.py     # Mock calendar: slots, booking rules, reschedule/cancel, messages
+│   ├── tools.py          # Claude tool schemas (strict) + validating executor
+│   ├── guardrails.py     # Emergency / medical-advice screening, scripts, PII redaction
+│   ├── faq_eval.py       # Retrieval metrics + report
+│   ├── guardrail_eval.py # Guardrail precision/recall + report
+│   ├── scenarios.py      # Scripted call loader/validator
+│   └── cli.py            # cva-check-env, cva-faq, cva-faq-eval, cva-guardrail-eval, cva-slots
 ├── configs/clinic.yaml   # Synthetic clinic: hours, providers, appointment types
+├── knowledge/            # faq.md (knowledge base) + faq_eval.yaml (retrieval questions)
+├── eval/                 # guardrail_utterances.yaml + scenarios.yaml (scripted calls)
+├── reports/              # Measured results (Markdown + JSON)
 ├── tests/                # pytest, no keys / audio / network needed
 ├── .env.example          # Which keys are supported (all optional)
 └── .github/workflows/ci.yml
@@ -97,8 +139,11 @@ clinic-voice-agent/
 ```bash
 uv venv --python 3.12 && source .venv/bin/activate
 uv pip install -e ".[dev]"
-cp .env.example .env      # optional: add the keys you have
-cva-check-env             # shows which services are configured
+cp .env.example .env               # optional: add the keys you have
+cva-check-env                      # which services are configured (names only)
+cva-faq "can I eat before my blood test"
+cva-slots vaccination -n 3         # earliest free slots on a seeded demo calendar
+cva-faq-eval && cva-guardrail-eval # regenerate reports/
 pytest -q
 ```
 

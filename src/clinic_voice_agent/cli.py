@@ -92,3 +92,26 @@ def guardrail_eval_main(argv: list[str] | None = None) -> int:
     for e in summary["errors"]:
         print(f"  MISS [{e['gold']} -> {e['pred']}] {e['text']}")
     return 0
+
+
+def slots_main(argv: list[str] | None = None) -> int:
+    """Show the earliest free slots on a demo calendar seeded with synthetic bookings."""
+    from datetime import date
+
+    from clinic_voice_agent.config import load_clinic_config
+    from clinic_voice_agent.scheduling import Calendar, seed_demo, speak_datetime
+
+    cfg = load_clinic_config()
+    parser = argparse.ArgumentParser(description=slots_main.__doc__)
+    parser.add_argument("type", choices=sorted(cfg.appointment_types))
+    parser.add_argument("--date", help="YYYY-MM-DD (default: from today)")
+    parser.add_argument("--provider", choices=sorted(cfg.providers))
+    parser.add_argument("-n", type=int, default=5)
+    parser.add_argument("--seed-bookings", type=int, default=60)
+    args = parser.parse_args(argv)
+    calendar = Calendar(cfg)
+    seed_demo(calendar, n=args.seed_bookings)
+    day = date.fromisoformat(args.date) if args.date else None
+    for slot in calendar.find_slots(args.type, day=day, provider=args.provider, limit=args.n):
+        print(f"{speak_datetime(slot.start):<32} {cfg.provider_name(slot.provider)}")
+    return 0

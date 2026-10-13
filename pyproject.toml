@@ -23,6 +23,7 @@ cva-check-env = "clinic_voice_agent.cli:check_env_main"
 cva-faq = "clinic_voice_agent.cli:faq_main"
 cva-faq-eval = "clinic_voice_agent.cli:faq_eval_main"
 cva-guardrail-eval = "clinic_voice_agent.cli:guardrail_eval_main"
+cva-slots = "clinic_voice_agent.cli:slots_main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
