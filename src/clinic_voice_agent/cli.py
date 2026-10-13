@@ -74,3 +74,21 @@ def faq_eval_main(argv: list[str] | None = None) -> int:
             f"rejected={row['unanswerable_rejected']:.3f}"
         )
     return 0
+
+
+def guardrail_eval_main(argv: list[str] | None = None) -> int:
+    """Score the guardrails on eval/guardrail_utterances.yaml and write reports/guardrails.*"""
+    from clinic_voice_agent.config import REPORTS_DIR
+    from clinic_voice_agent.guardrail_eval import evaluate, load_utterances, write_report
+
+    parser = argparse.ArgumentParser(description=guardrail_eval_main.__doc__)
+    parser.add_argument("--out", default=str(REPORTS_DIR))
+    args = parser.parse_args(argv)
+    summary = evaluate(load_utterances())
+    write_report(summary, Path(args.out))
+    print(f"n={summary['n']} accuracy={summary['accuracy']:.3f}")
+    for label, m in summary["per_class"].items():
+        print(f"  {label:<15} P={m['precision']:.3f} R={m['recall']:.3f} n={m['support']}")
+    for e in summary["errors"]:
+        print(f"  MISS [{e['gold']} -> {e['pred']}] {e['text']}")
+    return 0

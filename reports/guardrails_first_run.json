@@ -1,0 +1,111 @@
+{
+  "n": 75,
+  "accuracy": 0.8533333333333334,
+  "per_class": {
+    "emergency": {
+      "precision": 0.9565217391304348,
+      "recall": 0.88,
+      "support": 25
+    },
+    "medical_advice": {
+      "precision": 0.9333333333333333,
+      "recall": 0.7,
+      "support": 20
+    },
+    "ok": {
+      "precision": 0.7567567567567568,
+      "recall": 0.9333333333333333,
+      "support": 30
+    }
+  },
+  "confusion": {
+    "emergency": {
+      "emergency": 22,
+      "medical_advice": 0,
+      "ok": 3
+    },
+    "medical_advice": {
+      "emergency": 0,
+      "medical_advice": 14,
+      "ok": 6
+    },
+    "ok": {
+      "emergency": 1,
+      "medical_advice": 1,
+      "ok": 28
+    }
+  },
+  "errors": [
+    {
+      "text": "i have crushing pressure in my chest",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "i've been thinking about ending my life",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "my arm went numb and i can't move my left side",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "can i stop taking my blood pressure tablets",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "is this mole cancer",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "my child has a temperature of 38 should i give him something",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "can i give my baby ibuprofen",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "is my blood sugar too high at nine",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "can you tell me if this cough is contagious",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "can i book my second dose of the vaccine",
+      "gold": "ok",
+      "pred": "medical_advice",
+      "categories": [
+        "dose"
+      ]
+    },
+    {
+      "text": "i had a stroke last year and need a check up",
+      "gold": "ok",
+      "pred": "emergency",
+      "categories": [
+        "stroke"
+      ]
+    }
+  ],
+  "ms_per_utterance": 0.008687773176158467
+}
