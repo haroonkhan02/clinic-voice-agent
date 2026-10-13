@@ -1,0 +1,599 @@
+{
+  "summary": {
+    "n_answerable": 36,
+    "n_unanswerable": 4,
+    "hit@1": 0.8333333333333334,
+    "hit@3": 0.9444444444444444,
+    "mrr@3": 0.875,
+    "thresholds": [
+      {
+        "min_score": 0.0,
+        "answerable_correct_and_kept": 0.8333333333333334,
+        "unanswerable_rejected": 0.5
+      },
+      {
+        "min_score": 1.0,
+        "answerable_correct_and_kept": 0.8333333333333334,
+        "unanswerable_rejected": 0.5
+      },
+      {
+        "min_score": 2.0,
+        "answerable_correct_and_kept": 0.8333333333333334,
+        "unanswerable_rejected": 0.5
+      },
+      {
+        "min_score": 3.0,
+        "answerable_correct_and_kept": 0.6666666666666666,
+        "unanswerable_rejected": 0.75
+      },
+      {
+        "min_score": 4.0,
+        "answerable_correct_and_kept": 0.5833333333333334,
+        "unanswerable_rejected": 0.75
+      },
+      {
+        "min_score": 5.0,
+        "answerable_correct_and_kept": 0.4444444444444444,
+        "unanswerable_rejected": 0.75
+      }
+    ]
+  },
+  "questions": [
+    {
+      "question": "what time do you open tomorrow morning",
+      "gold": "opening-hours",
+      "ranked": [
+        "cancelling-or-rescheduling",
+        "blood-test-preparation",
+        "opening-hours"
+      ],
+      "scores": [
+        3.535,
+        3.516,
+        2.877
+      ],
+      "rank": 3
+    },
+    {
+      "question": "are you open on saturdays",
+      "gold": "opening-hours",
+      "ranked": [
+        "opening-hours",
+        "contacting-the-clinic",
+        "out-of-hours-care"
+      ],
+      "scores": [
+        5.755,
+        4.488,
+        3.287
+      ],
+      "rank": 1
+    },
+    {
+      "question": "until when can I come in on a friday",
+      "gold": "opening-hours",
+      "ranked": [
+        "fever-or-infection-symptoms",
+        "home-visits",
+        "opening-hours"
+      ],
+      "scores": [
+        2.478,
+        2.438,
+        2.334
+      ],
+      "rank": 3
+    },
+    {
+      "question": "do you close for lunch",
+      "gold": "opening-hours",
+      "ranked": [
+        "opening-hours",
+        "contacting-the-clinic",
+        "out-of-hours-care"
+      ],
+      "scores": [
+        5.211,
+        2.244,
+        1.643
+      ],
+      "rank": 1
+    },
+    {
+      "question": "what's the address of the practice",
+      "gold": "address-and-directions",
+      "ranked": [
+        "address-and-directions",
+        "what-to-bring-to-an-appointment"
+      ],
+      "scores": [
+        3.824,
+        2.97
+      ],
+      "rank": 1
+    },
+    {
+      "question": "which bus gets me to you",
+      "gold": "address-and-directions",
+      "ranked": [
+        "address-and-directions"
+      ],
+      "scores": [
+        2.749
+      ],
+      "rank": 1
+    },
+    {
+      "question": "is there somewhere to leave my car",
+      "gold": "parking",
+      "ranked": [
+        "parking",
+        "home-visits"
+      ],
+      "scores": [
+        5.282,
+        2.97
+      ],
+      "rank": 1
+    },
+    {
+      "question": "can I get in with a wheelchair",
+      "gold": "accessibility",
+      "ranked": [
+        "accessibility",
+        "parking"
+      ],
+      "scores": [
+        2.561,
+        2.224
+      ],
+      "rank": 1
+    },
+    {
+      "question": "can I bring my guide dog",
+      "gold": "accessibility",
+      "ranked": [
+        "accessibility",
+        "what-to-bring-to-an-appointment",
+        "registering-as-a-new-patient"
+      ],
+      "scores": [
+        6.24,
+        2.673,
+        1.98
+      ],
+      "rank": 1
+    },
+    {
+      "question": "does anyone there speak french",
+      "gold": "languages-spoken",
+      "ranked": [
+        "languages-spoken"
+      ],
+      "scores": [
+        7.222
+      ],
+      "rank": 1
+    },
+    {
+      "question": "I need an interpreter for my mother",
+      "gold": "languages-spoken",
+      "ranked": [
+        "languages-spoken"
+      ],
+      "scores": [
+        2.791
+      ],
+      "rank": 1
+    },
+    {
+      "question": "who are the doctors at the clinic",
+      "gold": "doctors-and-staff",
+      "ranked": [
+        "contacting-the-clinic",
+        "accessibility",
+        "out-of-hours-care"
+      ],
+      "scores": [
+        2.862,
+        1.918,
+        1.856
+      ],
+      "rank": null
+    },
+    {
+      "question": "I just moved here and want to become a patient",
+      "gold": "registering-as-a-new-patient",
+      "ranked": [
+        "registering-as-a-new-patient",
+        "running-late",
+        "home-visits"
+      ],
+      "scores": [
+        2.6,
+        1.951,
+        1.826
+      ],
+      "rank": 1
+    },
+    {
+      "question": "what documents do I need for my first visit as a new patient",
+      "gold": "registering-as-a-new-patient",
+      "ranked": [
+        "registering-as-a-new-patient",
+        "home-visits",
+        "what-to-bring-to-an-appointment"
+      ],
+      "scores": [
+        7.0,
+        5.044,
+        4.175
+      ],
+      "rank": 1
+    },
+    {
+      "question": "do I need to bring my insurance card",
+      "gold": "what-to-bring-to-an-appointment",
+      "ranked": [
+        "what-to-bring-to-an-appointment",
+        "registering-as-a-new-patient",
+        "insurance-and-payment"
+      ],
+      "scores": [
+        6.849,
+        5.578,
+        5.492
+      ],
+      "rank": 1
+    },
+    {
+      "question": "how long is a normal appointment",
+      "gold": "appointment-types-and-length",
+      "ranked": [
+        "appointment-types-and-length",
+        "video-consultations",
+        "what-to-bring-to-an-appointment"
+      ],
+      "scores": [
+        4.952,
+        4.19,
+        1.035
+      ],
+      "rank": 1
+    },
+    {
+      "question": "I have several things to talk about with the doctor, what should I book",
+      "gold": "appointment-types-and-length",
+      "ranked": [
+        "address-and-directions",
+        "doctors-and-staff",
+        "video-consultations"
+      ],
+      "scores": [
+        2.749,
+        2.436,
+        2.115
+      ],
+      "rank": null
+    },
+    {
+      "question": "can I have breakfast before my blood test",
+      "gold": "blood-test-preparation",
+      "ranked": [
+        "blood-test-preparation",
+        "doctors-and-staff",
+        "appointment-types-and-length"
+      ],
+      "scores": [
+        6.839,
+        3.43,
+        3.43
+      ],
+      "rank": 1
+    },
+    {
+      "question": "how many hours do I have to fast before bloods",
+      "gold": "blood-test-preparation",
+      "ranked": [
+        "blood-test-preparation",
+        "opening-hours",
+        "contacting-the-clinic"
+      ],
+      "scores": [
+        9.045,
+        2.877,
+        2.244
+      ],
+      "rank": 1
+    },
+    {
+      "question": "can I get a flu jab with you",
+      "gold": "vaccinations",
+      "ranked": [
+        "vaccinations",
+        "what-to-bring-to-an-appointment",
+        "insurance-and-payment"
+      ],
+      "scores": [
+        5.585,
+        1.617,
+        1.52
+      ],
+      "rank": 1
+    },
+    {
+      "question": "I'm travelling to Kenya, when should I get my shots",
+      "gold": "vaccinations",
+      "ranked": [
+        "vaccinations",
+        "what-to-bring-to-an-appointment",
+        "insurance-and-payment"
+      ],
+      "scores": [
+        2.876,
+        1.617,
+        1.52
+      ],
+      "rank": 1
+    },
+    {
+      "question": "I can't make it on Thursday, how much notice do you need",
+      "gold": "cancelling-or-rescheduling",
+      "ranked": [
+        "cancelling-or-rescheduling",
+        "opening-hours"
+      ],
+      "scores": [
+        2.833,
+        2.334
+      ],
+      "rank": 1
+    },
+    {
+      "question": "I'm stuck in traffic and will be fifteen minutes late",
+      "gold": "running-late",
+      "ranked": [
+        "running-late",
+        "appointment-types-and-length",
+        "address-and-directions"
+      ],
+      "scores": [
+        6.994,
+        2.351,
+        1.69
+      ],
+      "rank": 1
+    },
+    {
+      "question": "can you tell me my blood results",
+      "gold": "test-results",
+      "ranked": [
+        "test-results",
+        "blood-test-preparation",
+        "registering-as-a-new-patient"
+      ],
+      "scores": [
+        3.952,
+        3.065,
+        2.101
+      ],
+      "rank": 1
+    },
+    {
+      "question": "I need a refill of my blood pressure tablets",
+      "gold": "repeat-prescriptions",
+      "ranked": [
+        "repeat-prescriptions",
+        "blood-test-preparation",
+        "doctors-and-staff"
+      ],
+      "scores": [
+        4.577,
+        3.065,
+        1.933
+      ],
+      "rank": 1
+    },
+    {
+      "question": "I need a note for my employer because I'm off work ill",
+      "gold": "sick-notes",
+      "ranked": [
+        "sick-notes",
+        "running-late",
+        "home-visits"
+      ],
+      "scores": [
+        7.064,
+        2.605,
+        2.438
+      ],
+      "rank": 1
+    },
+    {
+      "question": "can I get a referral to a dermatologist",
+      "gold": "referrals-to-specialists",
+      "ranked": [
+        "referrals-to-specialists",
+        "what-to-bring-to-an-appointment"
+      ],
+      "scores": [
+        4.559,
+        2.438
+      ],
+      "rank": 1
+    },
+    {
+      "question": "how do I get a copy of my patient file",
+      "gold": "medical-records",
+      "ranked": [
+        "medical-records",
+        "registering-as-a-new-patient",
+        "running-late"
+      ],
+      "scores": [
+        4.168,
+        2.6,
+        1.951
+      ],
+      "rank": 1
+    },
+    {
+      "question": "can I see the doctor online instead of coming in",
+      "gold": "video-consultations",
+      "ranked": [
+        "video-consultations",
+        "sick-notes",
+        "fever-or-infection-symptoms"
+      ],
+      "scores": [
+        4.413,
+        2.985,
+        2.122
+      ],
+      "rank": 1
+    },
+    {
+      "question": "my father is bedbound, can the doctor come to the house",
+      "gold": "home-visits",
+      "ranked": [
+        "home-visits",
+        "fever-or-infection-symptoms",
+        "doctors-and-staff"
+      ],
+      "scores": [
+        3.287,
+        2.478,
+        1.359
+      ],
+      "rank": 1
+    },
+    {
+      "question": "my son has a high temperature and a rash, can we just come in",
+      "gold": "fever-or-infection-symptoms",
+      "ranked": [
+        "fever-or-infection-symptoms",
+        "accessibility",
+        "home-visits"
+      ],
+      "scores": [
+        5.496,
+        3.12,
+        2.438
+      ],
+      "rank": 1
+    },
+    {
+      "question": "do you take private patients",
+      "gold": "insurance-and-payment",
+      "ranked": [
+        "registering-as-a-new-patient",
+        "parking",
+        "insurance-and-payment"
+      ],
+      "scores": [
+        4.399,
+        3.89,
+        2.291
+      ],
+      "rank": 3
+    },
+    {
+      "question": "do I have to pay for a travel vaccine",
+      "gold": "insurance-and-payment",
+      "ranked": [
+        "insurance-and-payment",
+        "vaccinations",
+        "what-to-bring-to-an-appointment"
+      ],
+      "scores": [
+        7.674,
+        6.457,
+        1.617
+      ],
+      "rank": 1
+    },
+    {
+      "question": "who do I call at night when you're closed",
+      "gold": "out-of-hours-care",
+      "ranked": [
+        "out-of-hours-care",
+        "opening-hours",
+        "contacting-the-clinic"
+      ],
+      "scores": [
+        8.226,
+        2.877,
+        2.244
+      ],
+      "rank": 1
+    },
+    {
+      "question": "can I leave a message for Dr Weber",
+      "gold": "leaving-a-message-for-a-doctor",
+      "ranked": [
+        "doctors-and-staff",
+        "leaving-a-message-for-a-doctor",
+        "home-visits"
+      ],
+      "scores": [
+        5.888,
+        4.004,
+        2.97
+      ],
+      "rank": 2
+    },
+    {
+      "question": "is there an email address I can write to",
+      "gold": "contacting-the-clinic",
+      "ranked": [
+        "contacting-the-clinic",
+        "address-and-directions"
+      ],
+      "scores": [
+        6.136,
+        3.824
+      ],
+      "rank": 1
+    },
+    {
+      "question": "do you sell concert tickets",
+      "gold": null,
+      "ranked": [],
+      "scores": [],
+      "rank": null
+    },
+    {
+      "question": "what's the weather going to be like tomorrow",
+      "gold": null,
+      "ranked": [
+        "what-to-bring-to-an-appointment"
+      ],
+      "scores": [
+        2.97
+      ],
+      "rank": null
+    },
+    {
+      "question": "can you recommend a good dentist",
+      "gold": null,
+      "ranked": [],
+      "scores": [],
+      "rank": null
+    },
+    {
+      "question": "is the pharmacy next door open on sundays",
+      "gold": null,
+      "ranked": [
+        "opening-hours",
+        "address-and-directions",
+        "contacting-the-clinic"
+      ],
+      "scores": [
+        5.755,
+        5.006,
+        4.488
+      ],
+      "rank": null
+    }
+  ]
+}

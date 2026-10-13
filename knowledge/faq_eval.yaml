@@ -1,0 +1,45 @@
+# Caller-style questions for the FAQ retriever, written as people talk on the phone.
+# `gold` is the id (slugified `##` title) of the passage that answers the question;
+# `null` means the knowledge base has no answer and the agent should take a message instead.
+# Written once, before running the retriever; don't tune the retriever to these questions.
+questions:
+  - {q: "what time do you open tomorrow morning", gold: opening-hours}
+  - {q: "are you open on saturdays", gold: opening-hours}
+  - {q: "until when can I come in on a friday", gold: opening-hours}
+  - {q: "do you close for lunch", gold: opening-hours}
+  - {q: "what's the address of the practice", gold: address-and-directions}
+  - {q: "which bus gets me to you", gold: address-and-directions}
+  - {q: "is there somewhere to leave my car", gold: parking}
+  - {q: "can I get in with a wheelchair", gold: accessibility}
+  - {q: "can I bring my guide dog", gold: accessibility}
+  - {q: "does anyone there speak french", gold: languages-spoken}
+  - {q: "I need an interpreter for my mother", gold: languages-spoken}
+  - {q: "who are the doctors at the clinic", gold: doctors-and-staff}
+  - {q: "I just moved here and want to become a patient", gold: registering-as-a-new-patient}
+  - {q: "what documents do I need for my first visit as a new patient", gold: registering-as-a-new-patient}
+  - {q: "do I need to bring my insurance card", gold: what-to-bring-to-an-appointment}
+  - {q: "how long is a normal appointment", gold: appointment-types-and-length}
+  - {q: "I have several things to talk about with the doctor, what should I book", gold: appointment-types-and-length}
+  - {q: "can I have breakfast before my blood test", gold: blood-test-preparation}
+  - {q: "how many hours do I have to fast before bloods", gold: blood-test-preparation}
+  - {q: "can I get a flu jab with you", gold: vaccinations}
+  - {q: "I'm travelling to Kenya, when should I get my shots", gold: vaccinations}
+  - {q: "I can't make it on Thursday, how much notice do you need", gold: cancelling-or-rescheduling}
+  - {q: "I'm stuck in traffic and will be fifteen minutes late", gold: running-late}
+  - {q: "can you tell me my blood results", gold: test-results}
+  - {q: "I need a refill of my blood pressure tablets", gold: repeat-prescriptions}
+  - {q: "I need a note for my employer because I'm off work ill", gold: sick-notes}
+  - {q: "can I get a referral to a dermatologist", gold: referrals-to-specialists}
+  - {q: "how do I get a copy of my patient file", gold: medical-records}
+  - {q: "can I see the doctor online instead of coming in", gold: video-consultations}
+  - {q: "my father is bedbound, can the doctor come to the house", gold: home-visits}
+  - {q: "my son has a high temperature and a rash, can we just come in", gold: fever-or-infection-symptoms}
+  - {q: "do you take private patients", gold: insurance-and-payment}
+  - {q: "do I have to pay for a travel vaccine", gold: insurance-and-payment}
+  - {q: "who do I call at night when you're closed", gold: out-of-hours-care}
+  - {q: "can I leave a message for Dr Weber", gold: leaving-a-message-for-a-doctor}
+  - {q: "is there an email address I can write to", gold: contacting-the-clinic}
+  - {q: "do you sell concert tickets", gold: null}
+  - {q: "what's the weather going to be like tomorrow", gold: null}
+  - {q: "can you recommend a good dentist", gold: null}
+  - {q: "is the pharmacy next door open on sundays", gold: null}

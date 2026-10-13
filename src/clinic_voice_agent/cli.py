@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 from clinic_voice_agent.config import (
     REQUIRE_ALL,
@@ -36,4 +37,40 @@ def check_env_main(argv: list[str] | None = None) -> int:
             joiner = " and " if stage in REQUIRE_ALL else " or "
             detail = f"needs {joiner.join(missing)} -> fallback: {FALLBACKS[stage]}"
         print(f"{stage:<10} {status:<8} {detail}")
+    return 0
+
+
+def faq_main(argv: list[str] | None = None) -> int:
+    """Search the clinic knowledge base the way the agent's FAQ tool does."""
+    from clinic_voice_agent.knowledge import load_retriever
+
+    parser = argparse.ArgumentParser(description=faq_main.__doc__)
+    parser.add_argument("question", nargs="+")
+    parser.add_argument("-k", type=int, default=3)
+    args = parser.parse_args(argv)
+    for hit in load_retriever().search(" ".join(args.question), k=args.k):
+        print(f"{hit.score:6.2f}  {hit.passage.title}\n        {hit.passage.text[:160]}...")
+    return 0
+
+
+def faq_eval_main(argv: list[str] | None = None) -> int:
+    """Score the FAQ retriever on knowledge/faq_eval.yaml and write reports/faq_retrieval.*"""
+    from clinic_voice_agent.config import REPORTS_DIR
+    from clinic_voice_agent.faq_eval import evaluate, load_questions, write_report
+    from clinic_voice_agent.knowledge import load_retriever
+
+    parser = argparse.ArgumentParser(description=faq_eval_main.__doc__)
+    parser.add_argument("--out", default=str(REPORTS_DIR))
+    args = parser.parse_args(argv)
+    results, summary = evaluate(load_retriever(), load_questions())
+    write_report(results, summary, Path(args.out))
+    print(
+        f"answerable={summary['n_answerable']} hit@1={summary['hit@1']:.3f} "
+        f"hit@3={summary['hit@3']:.3f} mrr@3={summary['mrr@3']:.3f}"
+    )
+    for row in summary["thresholds"]:
+        print(
+            f"  min_score={row['min_score']:.1f} kept={row['answerable_correct_and_kept']:.3f} "
+            f"rejected={row['unanswerable_rejected']:.3f}"
+        )
     return 0
