@@ -13,11 +13,11 @@
 
 </div>
 
-> **🚧 Work in progress.** This is the foundation: config, the synthetic clinic knowledge
-> base, the FAQ retriever, the mock appointment calendar, the tool layer, guardrails, tests and CI.
-> The real-time voice pipeline (Pipecat + Twilio), the Claude agent and the evaluation
-> results come in the next steps. The plan below describes the intended design. Numbers will appear
-> here only after they have been measured.
+> **🚧 Work in progress (2 of 3 steps done).** Built so far: the knowledge base, FAQ retriever,
+> mock calendar, tools and guardrails (step 1), then the Claude agent loop, the text-mode call
+> harness, the Pipecat voice pipeline and the Twilio server (step 2). The speech path is measured
+> with real Deepgram audio. **The Claude part has not been run live yet** (no Anthropic API key on
+> the build machine), so there are no agent results below. Final evaluation and demo come next.
 
 ---
 
@@ -76,14 +76,19 @@ flowchart LR
 | Mock calendar: opening hours, lunch break, provider skills, double booking, identity check | ✅ |
 | 8 strict Claude tool schemas + validating executor (booking needs `caller_confirmed`) | ✅ |
 | Guardrails: emergency → 112/911 script, medical-advice refusal, PII redaction for logs | ✅ |
-| 13 scripted evaluation calls (`eval/scenarios.yaml`) | ✅ written, scored next session |
-| Claude agent, Pipecat pipeline, Twilio server | ⏳ next session |
-| Agent evaluation, latency report, demo | ⏳ final session |
+| Claude agent loop (`claude-opus-5-5`, effort `low`, streaming, server-side refusal fallback) | ✅ built, unit-tested with a scripted model · ⏳ live run needs `ANTHROPIC_API_KEY` |
+| Text-mode harness: 13 scripted calls scored on effects (tool log, calendar, messages) | ✅ built · ⏳ live run needs the key |
+| Pipecat pipeline: Deepgram Flux STT → guardrail gate → Claude + tools → Deepgram TTS | ✅ runs live (safety path verified over a simulated Twilio stream) |
+| FastAPI Twilio server: TwiML webhook (signature check) + Media Streams WebSocket | ✅ |
+| Speech round trip (TTS → 8 kHz μ-law → STT → guardrails) and simulated calls | ✅ measured below |
+| Agent evaluation with Claude, local mic mode, local STT/TTS fallback, demo | ⏳ final step |
 
-## Early measurements (components only)
+## Measurements so far
 
-These numbers cover the building blocks, not the voice agent. Both evaluation sets were written by
-hand for this repo, so they are small and probably easier than real calls.
+Every number below comes from a command in this repo, run on 2026-10-13/14. The evaluation sets were
+written by hand for this repo, so they are small and probably easier than real calls. **The Claude
+agent itself has not been measured yet** (no Anthropic API key on the build machine): `cva-eval-calls`
+is ready and writes `reports/agent_scenarios.md` once a key is set.
 
 **FAQ retrieval** (`cva-faq-eval`, 36 answerable + 4 out-of-scope caller questions →
 [`reports/faq_retrieval.md`](reports/faq_retrieval.md))
@@ -111,6 +116,62 @@ phrase at a time. Since they were checked on the same set, the second row is opt
 held-out set comes next. The two remaining errors are false alarms: *"I had a stroke last year"* and
 *"second dose of the vaccine"*. Screening takes about 8 µs per utterance.
 
+### Speech round trip: do the guardrails survive the phone line?
+
+`cva-speech-eval` → [`reports/speech_roundtrip.md`](reports/speech_roundtrip.md). 108 caller lines
+(the 75 labelled guardrail utterances + 33 lines from the scripted calls, 297 s of audio) are spoken
+by Deepgram Aura-2 straight into the phone codec (8 kHz μ-law, what Twilio carries), then
+transcribed by Deepgram Nova-3 (batch) and Deepgram Flux (streamed at real-time pace in 80 ms
+chunks, the model the live pipeline uses). The guardrails run on each transcript.
+
+| STT | WER | Exact transcripts | Guardrail decision unchanged | Emergency recall | Medical-advice recall |
+|---|---|---|---|---|---|
+| Nova-3 batch | 0.046 | 0.843 | **108 / 108** | 1.00 → 1.00 | 1.00 → 1.00 |
+| Flux streaming | 0.063 | 0.806 | **108 / 108** | 1.00 → 1.00 | 1.00 → 1.00 |
+
+| Latency | Median | p90 |
+|---|---|---|
+| Deepgram TTS, time to first byte (REST) | 0.26 s | 0.52 s |
+| Flux, end of speech → `EndOfTurn` | 0.71 s | 1.44 s |
+
+What the numbers say:
+
+- **Safety decisions survive clean phone audio.** Not one guardrail decision flipped. That is
+  expected: emergency and medical words ("chest pain", "collapsed", "dose") are short, common and
+  well recognised. The voice is synthetic and clean, so this is a lower bound on difficulty, not
+  proof for real callers with accents, noise or panic.
+- **Errors sit in identity details.** On the 12 lines with names, dates of birth and phone numbers,
+  WER is 0.13 (Nova-3) and 0.22 (Flux), against 0.026 / 0.025 on everything else. Names change
+  (*Schulz* → *Scholes*, *Demir* → *Damir*, *Mia* → *Nia*, *Sara Novak* → *Serendovac*), *born 3 May
+  1990* came back as *1999* from both engines, and Flux dropped digits from all four placeholder
+  phone numbers (long runs of zeros are a worst case). Part of the Flux WER is format only: it
+  writes years as words (*nineteen eighty eight*), which the WER normaliser doesn't map to digits.
+  This is why the agent must read back name, date of birth and number before it books, and why the
+  calendar requires name **and** date of birth to match before changing anything.
+- **Flux sometimes ends the turn too early.** On 6 of 108 lines it sent `EndOfTurn` while the
+  caller was still talking (pauses in phone numbers, *"no thank you, that's all"*). A live bot would
+  start answering mid-sentence there. Tuning `eot_threshold` / `eot_timeout_ms` is the next step.
+- The first version of the Flux client stopped listening at the first `EndOfTurn`, which cut the end
+  off those lines and inflated Flux WER to 0.093. It now follows every turn; the numbers above are
+  from the fixed client.
+
+### Simulated phone calls through the real server
+
+`cva-phone-sim` → [`reports/phone_sim.md`](reports/phone_sim.md). A fake Twilio client speaks the
+Media Streams protocol to the real `/media` WebSocket, so the whole live path runs: Twilio
+serializer → Flux → guardrail gate → Deepgram TTS → serializer. Each call waits for the greeting,
+plays one caller line in real time, then keeps sending line silence. The bot's reply audio is
+transcribed to check what the caller would hear. No LLM key was set, so this tests only the
+scripted safety path.
+
+| Calls | Bot replied | Right script heard | Voice-to-voice median | p90 | max |
+|---|---|---|---|---|---|
+| 20 (10 emergency, 10 medical advice) | 20 | **20** | **0.79 s** | 1.32 s | 1.41 s |
+
+Voice-to-voice is from the end of the caller's speech to the first reply audio frame; a real call
+adds the phone network and Twilio's edge on top. Emergency calls took longer (median 0.99 s vs 0.58 s
+for medical advice). The cause hasn't been investigated yet.
+
 ## Repository structure
 
 ```text
@@ -121,10 +182,17 @@ clinic-voice-agent/
 │   ├── scheduling.py     # Mock calendar: slots, booking rules, reschedule/cancel, messages
 │   ├── tools.py          # Claude tool schemas (strict) + validating executor
 │   ├── guardrails.py     # Emergency / medical-advice screening, scripts, PII redaction
+│   ├── agent.py          # Guardrails → Claude tool-use loop (streaming, TTFT, refusal fallback)
+│   ├── harness.py        # Scripted calls in text mode, effect-based scoring + report
+│   ├── voice.py          # Pipecat pipeline: Flux STT → guardrail gate → Claude → Deepgram TTS
+│   ├── server.py         # FastAPI: Twilio webhook (TwiML) + Media Streams WebSocket
+│   ├── audio.py          # G.711 μ-law decoding, silence trimming, WER helpers
+│   ├── speech_eval.py    # Deepgram TTS → phone audio → Nova-3 / Flux → guardrails
+│   ├── phone_sim.py      # Fake Twilio client that calls the real /media endpoint
 │   ├── faq_eval.py       # Retrieval metrics + report
 │   ├── guardrail_eval.py # Guardrail precision/recall + report
 │   ├── scenarios.py      # Scripted call loader/validator
-│   └── cli.py            # cva-check-env, cva-faq, cva-faq-eval, cva-guardrail-eval, cva-slots
+│   └── cli.py            # cva-* command-line entry points
 ├── configs/clinic.yaml   # Synthetic clinic: hours, providers, appointment types
 ├── knowledge/            # faq.md (knowledge base) + faq_eval.yaml (retrieval questions)
 ├── eval/                 # guardrail_utterances.yaml + scenarios.yaml (scripted calls)
@@ -138,14 +206,37 @@ clinic-voice-agent/
 
 ```bash
 uv venv --python 3.12 && source .venv/bin/activate
-uv pip install -e ".[dev]"
-cp .env.example .env               # optional: add the keys you have
+uv pip install -e ".[voice,dev]"   # core only: uv pip install -e ".[dev]"
+cp .env.example .env               # add the keys you have
 cva-check-env                      # which services are configured (names only)
 cva-faq "can I eat before my blood test"
 cva-slots vaccination -n 3         # earliest free slots on a seeded demo calendar
-cva-faq-eval && cva-guardrail-eval # regenerate reports/
 pytest -q
 ```
+
+| Command | Needs | What it does |
+|---|---|---|
+| `cva-faq-eval`, `cva-guardrail-eval` | nothing | Regenerate the component reports |
+| `cva-chat --show-tools` | Anthropic key | Talk to the receptionist in the terminal |
+| `cva-eval-calls` | Anthropic key | Play the 13 scripted calls → `reports/agent_scenarios.md` |
+| `cva-speech-eval` | Deepgram key | Speech round trip → `reports/speech_roundtrip.md` |
+| `cva-phone-sim` | Deepgram key | Simulated Twilio calls into the real server → `reports/phone_sim.md` |
+| `cva-serve` | Deepgram + Anthropic keys | The phone server for Twilio |
+
+### Connecting a real Twilio number
+
+You need your own Twilio account and phone number (paid). The code never creates accounts or
+numbers.
+
+1. Start the server: `cva-serve --port 8765`.
+2. Expose it publicly, e.g. `ngrok http 8765`, and put the hostname (no `https://`) in `.env` as
+   `PUBLIC_HOST=abc123.ngrok.app`.
+3. Add `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` to `.env`. The token turns on webhook signature
+   checks and lets the server hang up the call when the pipeline ends.
+4. In the Twilio console, under the number's **Voice configuration**, set *A call comes in* →
+   **Webhook**, `https://abc123.ngrok.app/voice`, method **POST**.
+5. Call the number. `/voice` answers with TwiML `<Connect><Stream url="wss://…/media"/>`, and
+   the call audio flows over that WebSocket.
 
 ## Privacy & ethics
 
