@@ -17,6 +17,14 @@ dependencies = [
 
 [project.optional-dependencies]
 agent = ["anthropic>=1.13"]
+voice = [
+    "anthropic>=1.13",
+    "pipecat-ai[anthropic,deepgram,silero,websocket]>=1.12",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "python-multipart>=0.0.9",
+    "httpx>=0.27",
+]
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
@@ -27,6 +35,8 @@ cva-guardrail-eval = "clinic_voice_agent.cli:guardrail_eval_main"
 cva-slots = "clinic_voice_agent.cli:slots_main"
 cva-chat = "clinic_voice_agent.cli:chat_main"
 cva-eval-calls = "clinic_voice_agent.cli:eval_calls_main"
+cva-speech-eval = "clinic_voice_agent.cli:speech_eval_main"
+cva-serve = "clinic_voice_agent.server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
