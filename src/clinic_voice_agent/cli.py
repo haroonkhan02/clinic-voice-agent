@@ -115,3 +115,92 @@ def slots_main(argv: list[str] | None = None) -> int:
     for slot in calendar.find_slots(args.type, day=day, provider=args.provider, limit=args.n):
         print(f"{speak_datetime(slot.start):<32} {cfg.provider_name(slot.provider)}")
     return 0
+
+
+def _require_llm_key() -> bool:
+    load_env()
+    if stage_ready("llm"):
+        return True
+    print("ANTHROPIC_API_KEY is not set (add it to .env). The agent needs it for this command.")
+    return False
+
+
+def chat_main(argv: list[str] | None = None) -> int:
+    """Talk to the receptionist in the terminal (text mode, same agent as the phone line)."""
+    from datetime import datetime
+
+    from clinic_voice_agent.agent import EFFORT, MODEL, ClinicAgent
+    from clinic_voice_agent.config import OUTPUTS_DIR, load_clinic_config
+    from clinic_voice_agent.knowledge import load_retriever
+    from clinic_voice_agent.scheduling import Calendar, seed_demo
+    from clinic_voice_agent.tools import ToolExecutor
+
+    parser = argparse.ArgumentParser(description=chat_main.__doc__)
+    parser.add_argument("--now", help="Fake clinic clock, YYYY-MM-DDTHH:MM (default: real time)")
+    parser.add_argument("--model", default=MODEL)
+    parser.add_argument("--effort", default=EFFORT)
+    parser.add_argument("--calendar", default=str(OUTPUTS_DIR / "calendar.json"))
+    parser.add_argument("--show-tools", action="store_true")
+    args = parser.parse_args(argv)
+    if not _require_llm_key():
+        return 2
+    cfg = load_clinic_config()
+    now = (lambda: datetime.fromisoformat(args.now)) if args.now else None
+    calendar = Calendar(cfg, path=args.calendar, now=now)
+    if not calendar.appointments:
+        seed_demo(calendar)
+    agent = ClinicAgent(
+        cfg, ToolExecutor(cfg, calendar, load_retriever()), model=args.model, effort=args.effort
+    )
+    print(f"{cfg.name} receptionist (Ctrl-D to hang up)")
+    while True:
+        try:
+            line = input("caller> ").strip()
+        except EOFError:
+            print()
+            return 0
+        if not line:
+            continue
+        turn = agent.respond(line)
+        if args.show_tools:
+            for call in turn.tool_calls:
+                print(f"   [tool] {call['name']} ok={call['ok']} {call['args']}")
+        ttft = f" ttft={turn.ttft_s:.2f}s" if turn.ttft_s else ""
+        print(f"agent>  {turn.reply}   ({turn.guardrail}{ttft})")
+
+
+def eval_calls_main(argv: list[str] | None = None) -> int:
+    """Play eval/scenarios.yaml through the agent and write reports/agent_scenarios.*"""
+    from clinic_voice_agent.agent import EFFORT, MODEL, anthropic_llm_call
+    from clinic_voice_agent.config import REPORTS_DIR, load_clinic_config
+    from clinic_voice_agent.harness import run_scenario, summarise, write_report
+    from clinic_voice_agent.knowledge import load_retriever
+    from clinic_voice_agent.scenarios import load_scenarios
+    from clinic_voice_agent.tools import build_tool_specs
+
+    parser = argparse.ArgumentParser(description=eval_calls_main.__doc__)
+    parser.add_argument("--only", nargs="*", help="Scenario ids to run (default: all)")
+    parser.add_argument("--model", default=MODEL)
+    parser.add_argument("--effort", default=EFFORT)
+    parser.add_argument("--out", default=str(REPORTS_DIR))
+    args = parser.parse_args(argv)
+    if not _require_llm_key():
+        return 2
+    cfg = load_clinic_config()
+    scenarios = load_scenarios(tool_names={t["name"] for t in build_tool_specs(cfg)})
+    if args.only:
+        scenarios = [s for s in scenarios if s.id in set(args.only)]
+    retriever, llm_call = load_retriever(), anthropic_llm_call()
+    results = []
+    for scenario in scenarios:
+
+        def call(kwargs, _model=args.model, _effort=args.effort):
+            return llm_call({**kwargs, "model": _model, "output_config": {"effort": _effort}})
+
+        result = run_scenario(scenario, cfg, retriever, call)
+        results.append(result)
+        print(f"{'PASS' if result['passed'] else 'FAIL'}  {scenario.id}  {result['checks']}")
+    summary = summarise(results)
+    write_report(results, summary, Path(args.out), args.model, args.effort)
+    print(f"task success {summary['task_success']:.3f} over {len(results)} calls")
+    return 0
