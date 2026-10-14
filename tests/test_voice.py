@@ -77,3 +77,37 @@ def test_server_answers_twilio_webhook(monkeypatch):
     assert r.status_code == 200 and "wss://abc.example/media" in r.text
     monkeypatch.setenv("TWILIO_AUTH_TOKEN", "secret")
     assert client.post("/voice", data={"CallSid": "CA1"}).status_code == 403
+
+
+def test_phone_sim_speaks_twilio_media_streams():
+    import base64 as b64
+
+    from clinic_voice_agent.phone_sim import FRAME_BYTES, media_event, start_events
+
+    connected, start = start_events()
+    assert connected["event"] == "connected"
+    assert start["start"]["mediaFormat"] == {"encoding": "audio/x-mulaw", "sampleRate": 8000,
+                                             "channels": 1}
+    msg = media_event(b"\xff" * FRAME_BYTES, 7)
+    assert msg["event"] == "media" and msg["media"]["timestamp"] == "140"
+    assert b64.b64decode(msg["media"]["payload"]) == b"\xff" * 160
+
+
+def test_pipecat_detects_the_simulated_stream_as_twilio():
+    pytest.importorskip("pipecat")
+    from pipecat.runner.utils import _detect_transport_type_from_message
+
+    from clinic_voice_agent.phone_sim import start_events
+
+    assert _detect_transport_type_from_message(start_events()[1]) == "twilio"
+
+
+def test_phone_sim_summary():
+    from clinic_voice_agent.phone_sim import expected_phrase, summarise
+
+    rows = [{"voice_to_voice_s": 0.5, "correct": True}, {"voice_to_voice_s": 0.9, "correct": True},
+            {"voice_to_voice_s": None, "correct": False}]
+    s = summarise(rows)
+    assert (s["n_calls"], s["replied"], s["correct_script"]) == (3, 2, 2)
+    assert s["voice_to_voice_median_s"] == 0.7 and s["voice_to_voice_max_s"] == 0.9
+    assert expected_phrase("emergency") == "112" and expected_phrase("ok") is None

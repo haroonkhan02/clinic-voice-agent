@@ -108,8 +108,10 @@ def build_pipeline(transport, cfg: ClinicConfig, executor: ToolExecutor, env=os.
     tts = DeepgramTTSService(
         api_key=env["DEEPGRAM_API_KEY"], settings=DeepgramTTSService.Settings(voice=TTS_VOICE)
     )
+    # Without a key the pipeline still runs: greetings and the scripted guardrail replies work,
+    # but every turn that needs Claude fails (that is how `cva-phone-sim` tests the safety path).
     llm = AnthropicLLMService(
-        api_key=env["ANTHROPIC_API_KEY"],
+        api_key=env.get("ANTHROPIC_API_KEY", ""),
         settings=AnthropicLLMService.Settings(
             model=MODEL,
             system_instruction=voice_system_prompt(cfg, executor.calendar.now()),

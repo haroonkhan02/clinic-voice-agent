@@ -28,3 +28,20 @@ jobs:
         run: ruff check .
       - name: Test
         run: pytest -q
+
+  voice:
+    # The real-time stack (Pipecat, FastAPI) is heavy, so it is checked once on 3.12:
+    # the pipeline must assemble and the Twilio webhook must answer, still without any keys.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install with voice extras
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[voice,dev]"
+      - name: Test voice pipeline and server
+        run: pytest -q tests/test_voice.py tests/test_agent.py

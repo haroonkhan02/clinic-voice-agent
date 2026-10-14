@@ -93,11 +93,15 @@ def create_app():
         if transport_type != "twilio":
             await websocket.close()
             return
+        sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
+        token = os.environ.get("TWILIO_AUTH_TOKEN", "")
         serializer = TwilioFrameSerializer(
             stream_sid=call_data["stream_id"],
             call_sid=call_data["call_id"],
-            account_sid=os.environ.get("TWILIO_ACCOUNT_SID", ""),
-            auth_token=os.environ.get("TWILIO_AUTH_TOKEN", ""),
+            account_sid=sid,
+            auth_token=token,
+            # Hanging up through Twilio's REST API needs both credentials.
+            params=TwilioFrameSerializer.InputParams(auto_hang_up=bool(sid and token)),
         )
         params = FastAPIWebsocketParams(
             audio_in_enabled=True, audio_out_enabled=True, add_wav_header=False,

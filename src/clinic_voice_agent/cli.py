@@ -204,3 +204,59 @@ def eval_calls_main(argv: list[str] | None = None) -> int:
     write_report(results, summary, Path(args.out), args.model, args.effort)
     print(f"task success {summary['task_success']:.3f} over {len(results)} calls")
     return 0
+
+
+def speech_eval_main(argv: list[str] | None = None) -> int:
+    """Deepgram TTS → phone μ-law → Nova-3 / Flux STT → guardrails; writes reports/speech_*"""
+    from clinic_voice_agent.config import OUTPUTS_DIR, REPORTS_DIR
+    from clinic_voice_agent.guardrail_eval import load_utterances
+    from clinic_voice_agent.scenarios import load_scenarios
+    from clinic_voice_agent.speech_eval import collect_items, run, summarise, write_report
+
+    parser = argparse.ArgumentParser(description=speech_eval_main.__doc__)
+    parser.add_argument("--limit", type=int, help="Only the first N lines (smoke test)")
+    parser.add_argument("--out", default=str(REPORTS_DIR))
+    args = parser.parse_args(argv)
+    load_env()
+    if not stage_ready("stt"):
+        print("DEEPGRAM_API_KEY is not set (add it to .env).")
+        return 2
+    items = collect_items(load_utterances(), load_scenarios())[: args.limit]
+    results = run(items, OUTPUTS_DIR / "speech_cache")
+    summary = summarise(results)
+    write_report(results, summary, Path(args.out))
+    for name, m in summary["engines"].items():
+        print(f"{name}: wer={m['wer']:.3f} guardrail_agreement={m['guardrail_agreement']:.3f}")
+    print(f"flux end-of-turn latency: {summary['flux_eot_latency_s']}")
+    return 0
+
+
+def phone_sim_main(argv: list[str] | None = None) -> int:
+    """Fake-Twilio calls into the real /media endpoint; writes reports/phone_sim.*"""
+    import asyncio
+    import os
+
+    from clinic_voice_agent.config import OUTPUTS_DIR, REPORTS_DIR
+    from clinic_voice_agent.guardrail_eval import load_utterances
+    from clinic_voice_agent.phone_sim import run_sim, summarise, write_report
+
+    parser = argparse.ArgumentParser(description=phone_sim_main.__doc__)
+    parser.add_argument("--per-label", type=int, default=6)
+    parser.add_argument("--port", type=int, default=8799)
+    parser.add_argument("--out", default=str(REPORTS_DIR))
+    args = parser.parse_args(argv)
+    load_env()
+    if not stage_ready("stt"):
+        print("DEEPGRAM_API_KEY is not set (add it to .env).")
+        return 2
+    items, counts = [], {}
+    for text, label in load_utterances():
+        if label in ("emergency", "medical_advice") and counts.get(label, 0) < args.per_label:
+            counts[label] = counts.get(label, 0) + 1
+            items.append((text, label))
+    rows = asyncio.run(run_sim(items, args.port, OUTPUTS_DIR / "speech_cache",
+                               os.environ["DEEPGRAM_API_KEY"]))
+    summary = summarise(rows)
+    write_report(rows, summary, Path(args.out))
+    print(summary)
+    return 0

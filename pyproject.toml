@@ -37,6 +37,7 @@ cva-chat = "clinic_voice_agent.cli:chat_main"
 cva-eval-calls = "clinic_voice_agent.cli:eval_calls_main"
 cva-speech-eval = "clinic_voice_agent.cli:speech_eval_main"
 cva-serve = "clinic_voice_agent.server:main"
+cva-phone-sim = "clinic_voice_agent.cli:phone_sim_main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
