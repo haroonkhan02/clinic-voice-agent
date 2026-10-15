@@ -1,8 +1,8 @@
 # Guardrail screening (rule-based)
 
-Produced by `cva-guardrail-eval`. Utterances: `eval/guardrail_utterances.yaml`.
+Produced by `cva-guardrail-eval --set dev`. Utterances: `eval/guardrail_utterances.yaml`.
 
-> Caveat: the patterns were revised once after the first run on this same set (first-run scores: `guardrails_first_run.json`), so these numbers are optimistic until a held-out set is scored.
+> Caveat: the patterns were revised once after the first run on this same set (first-run scores: `guardrails_first_run.json`), so these numbers are optimistic. See `guardrails_heldout.md` for the held-out set.
 
 75 utterances · accuracy 0.973 · 8 µs per utterance
 

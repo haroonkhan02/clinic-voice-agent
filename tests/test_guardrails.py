@@ -1,6 +1,12 @@
 import pytest
 
-from clinic_voice_agent.guardrail_eval import LABELS, evaluate, load_utterances, write_report
+from clinic_voice_agent.guardrail_eval import (
+    HELDOUT_UTTERANCES,
+    LABELS,
+    evaluate,
+    load_utterances,
+    write_report,
+)
 from clinic_voice_agent.guardrails import (
     emergency_script,
     medical_advice_script,
@@ -85,3 +91,13 @@ def test_guardrail_eval_on_shipped_set(tmp_path):
     assert summary["per_class"]["emergency"]["recall"] == 1.0
     write_report(summary, tmp_path)
     assert (tmp_path / "guardrails.md").exists()
+
+
+def test_heldout_set_is_disjoint_and_writes_its_own_report(tmp_path):
+    heldout = load_utterances(HELDOUT_UTTERANCES)
+    dev_texts = {t for t, _ in load_utterances()}
+    assert {label for _, label in heldout} == set(LABELS)
+    assert not dev_texts & {t for t, _ in heldout}
+    write_report(evaluate(heldout), tmp_path, "heldout")
+    assert (tmp_path / "guardrails_heldout.md").exists()
+    assert not (tmp_path / "guardrails.md").exists()

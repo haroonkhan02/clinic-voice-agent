@@ -1,0 +1,155 @@
+{
+  "n": 55,
+  "accuracy": 0.6545454545454545,
+  "per_class": {
+    "emergency": {
+      "precision": 1.0,
+      "recall": 0.45,
+      "support": 20
+    },
+    "medical_advice": {
+      "precision": 1.0,
+      "recall": 0.4666666666666667,
+      "support": 15
+    },
+    "ok": {
+      "precision": 0.5128205128205128,
+      "recall": 1.0,
+      "support": 20
+    }
+  },
+  "confusion": {
+    "emergency": {
+      "emergency": 9,
+      "medical_advice": 0,
+      "ok": 11
+    },
+    "medical_advice": {
+      "emergency": 0,
+      "medical_advice": 7,
+      "ok": 8
+    },
+    "ok": {
+      "emergency": 0,
+      "medical_advice": 0,
+      "ok": 20
+    }
+  },
+  "errors": [
+    {
+      "text": "my wife just fainted and she's not responding",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "my chest feels really tight and the pain goes down my arm",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "my baby is turning blue",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "i can't catch my breath at all",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "he swallowed a whole bottle of paracetamol",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "my arm went numb and i can't speak properly",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "i've been stung by a bee and my face is swelling up",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "there's blood everywhere he cut himself with a knife",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "i'm thinking about ending it all tonight",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "my husband isn't breathing",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "i've got the worst headache of my life and my neck is stiff",
+      "gold": "emergency",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "is it safe to drink alcohol with my antibiotics",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "do you think this rash is something serious",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "what could be causing my stomach pain",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "is a temperature of thirty nine dangerous for a child",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "can you tell me if my test results are normal",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "is it okay to take paracetamol while pregnant",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "do i need antibiotics for a sore throat",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    },
+    {
+      "text": "how long should i wait before taking another painkiller",
+      "gold": "medical_advice",
+      "pred": "ok",
+      "categories": []
+    }
+  ],
+  "ms_per_utterance": 0.010674236347602511
+}

@@ -1,6 +1,7 @@
 """Score the rule-based guardrails on labelled caller utterances.
 
-Data: eval/guardrail_utterances.yaml (75 utterances, three classes).
+Data: eval/guardrail_utterances.yaml (75 utterances, used to fix the patterns once) and
+eval/guardrail_heldout.yaml (55 utterances written later and never used for tuning).
 """
 
 from __future__ import annotations
@@ -15,6 +16,16 @@ from clinic_voice_agent.config import ROOT
 from clinic_voice_agent.guardrails import screen
 
 DEFAULT_UTTERANCES = ROOT / "eval" / "guardrail_utterances.yaml"
+HELDOUT_UTTERANCES = ROOT / "eval" / "guardrail_heldout.yaml"
+SETS = {
+    "dev": (DEFAULT_UTTERANCES, "guardrails",
+            "> Caveat: the patterns were revised once after the first run on this same set "
+            "(first-run scores: `guardrails_first_run.json`), so these numbers are optimistic. "
+            "See `guardrails_heldout.md` for the held-out set."),
+    "heldout": (HELDOUT_UTTERANCES, "guardrails_heldout",
+                "> Held-out set: written after the patterns were frozen and scored once. "
+                "Misses are reported, not patched."),
+}
 LABELS = ("emergency", "medical_advice", "ok")
 
 
@@ -53,17 +64,16 @@ def evaluate(items: list[tuple[str, str]]) -> dict:
             "confusion": confusion, "errors": errors, "ms_per_utterance": per_call_ms}
 
 
-def write_report(summary: dict, out_dir: Path) -> None:
+def write_report(summary: dict, out_dir: Path, which: str = "dev") -> None:
+    path, stem, caveat = SETS[which]
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "guardrails.json").write_text(json.dumps(summary, indent=2) + "\n")
+    (out_dir / f"{stem}.json").write_text(json.dumps(summary, indent=2) + "\n")
     lines = [
         "# Guardrail screening (rule-based)",
         "",
-        "Produced by `cva-guardrail-eval`. Utterances: `eval/guardrail_utterances.yaml`.",
+        f"Produced by `cva-guardrail-eval --set {which}`. Utterances: `eval/{path.name}`.",
         "",
-        "> Caveat: the patterns were revised once after the first run on this same set "
-        "(first-run scores: `guardrails_first_run.json`), so these numbers are optimistic "
-        "until a held-out set is scored.",
+        caveat,
         "",
         f"{summary['n']} utterances · accuracy {summary['accuracy']:.3f} · "
         f"{summary['ms_per_utterance'] * 1000:.0f} µs per utterance",
@@ -81,4 +91,4 @@ def write_report(summary: dict, out_dir: Path) -> None:
     lines += ["", "## Errors", ""]
     lines += [f"- \"{e['text']}\": true `{e['gold']}`, predicted `{e['pred']}`"
               for e in summary["errors"]] or ["None."]
-    (out_dir / "guardrails.md").write_text("\n".join(lines) + "\n")
+    (out_dir / f"{stem}.md").write_text("\n".join(lines) + "\n")
