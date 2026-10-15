@@ -77,3 +77,16 @@ def test_collect_items_dedupes_scenario_lines():
     items = collect_items([("hello", "ok")], [S("a", ["hello", "bye"]), S("b", ["bye"])])
     assert [(i.text, i.label) for i in items] == [("hello", "ok"), ("bye", None)]
     assert isinstance(items[1], Item) and items[1].source == "scenario:a"
+
+
+def test_mulaw_encoder_round_trips_every_code():
+    import struct
+
+    from clinic_voice_agent.audio import mulaw_to_pcm16, pcm16_to_mulaw
+
+    # Every μ-law code decodes and re-encodes to itself (0x7F is negative zero → 0xFF).
+    for code in range(256):
+        expected = 0xFF if code == 0x7F else code
+        assert pcm16_to_mulaw(mulaw_to_pcm16(bytes([code]))) == bytes([expected])
+    loud = pcm16_to_mulaw(struct.pack("<2h", 32767, -32768))
+    assert loud == bytes([0x80, 0x00])  # clipped to the largest code of each sign

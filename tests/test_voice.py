@@ -111,3 +111,13 @@ def test_phone_sim_summary():
     assert (s["n_calls"], s["replied"], s["correct_script"]) == (3, 2, 2)
     assert s["voice_to_voice_median_s"] == 0.7 and s["voice_to_voice_max_s"] == 0.9
     assert expected_phrase("emergency") == "112" and expected_phrase("ok") is None
+
+
+def test_speech_backend_selection():
+    from clinic_voice_agent.voice import speech_backend
+
+    assert speech_backend({"DEEPGRAM_API_KEY": "k"}) == "deepgram"
+    assert speech_backend({}) == "local"
+    assert speech_backend({"DEEPGRAM_API_KEY": "k", "CVA_SPEECH": "local"}) == "local"
+    with pytest.raises(RuntimeError):
+        speech_backend({"CVA_SPEECH": "deepgram"})

@@ -232,6 +232,106 @@ def speech_eval_main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def flux_sweep_main(argv: list[str] | None = None) -> int:
+    """Replay cached phone audio through Flux at several eot_threshold values."""
+    import asyncio
+
+    from clinic_voice_agent.config import OUTPUTS_DIR, REPORTS_DIR
+    from clinic_voice_agent.eot_sweep import DEFAULT_THRESHOLDS, sweep, write_report
+    from clinic_voice_agent.guardrail_eval import load_utterances
+    from clinic_voice_agent.scenarios import load_scenarios
+    from clinic_voice_agent.speech_eval import collect_items
+
+    parser = argparse.ArgumentParser(description=flux_sweep_main.__doc__)
+    parser.add_argument("--thresholds", type=float, nargs="+", default=list(DEFAULT_THRESHOLDS))
+    parser.add_argument("--limit", type=int, help="Only the first N lines (smoke test)")
+    parser.add_argument("--out", default=str(REPORTS_DIR))
+    args = parser.parse_args(argv)
+    load_env()
+    if not stage_ready("stt"):
+        print("DEEPGRAM_API_KEY is not set (add it to .env).")
+        return 2
+    items = collect_items(load_utterances(), load_scenarios())[: args.limit]
+    result = asyncio.run(sweep(items, OUTPUTS_DIR / "speech_cache", args.thresholds))
+    write_report(result, Path(args.out))
+    for t, block in result.items():
+        s = block["summary"]
+        print(f"thr={t} premature={s['premature_lines']}/{s['n']} eot={s['eot_latency_s']}")
+    return 0
+
+
+def local_speech_eval_main(argv: list[str] | None = None) -> int:
+    """Offline speech: faster-whisper on the cached phone audio + a Kokoro → whisper round trip."""
+    import asyncio
+
+    from clinic_voice_agent.config import OUTPUTS_DIR, REPORTS_DIR, ROOT
+    from clinic_voice_agent.guardrail_eval import load_utterances
+    from clinic_voice_agent.local_speech import run, summarise, write_report
+    from clinic_voice_agent.scenarios import load_scenarios
+    from clinic_voice_agent.speech_eval import collect_items
+
+    parser = argparse.ArgumentParser(description=local_speech_eval_main.__doc__)
+    parser.add_argument("--limit", type=int, help="Only the first N lines (smoke test)")
+    parser.add_argument("--out", default=str(REPORTS_DIR))
+    args = parser.parse_args(argv)
+    items = collect_items(load_utterances(), load_scenarios())[: args.limit]
+    rows = asyncio.run(run(items, OUTPUTS_DIR / "speech_cache", ROOT / "models"))
+    summary = summarise(rows)
+    write_report(rows, summary, Path(args.out))
+    for s in summary:
+        print(f"{s['audio']}/{s['stt']}: wer={s['wer']:.3f} "
+              f"agreement={s['guardrail_agreement']:.3f} stt={s['stt_s']}")
+    return 0
+
+
+def mic_main(argv: list[str] | None = None) -> int:
+    """Talk to the receptionist through this computer's microphone and speakers."""
+    import asyncio
+
+    from clinic_voice_agent.config import load_clinic_config
+    from clinic_voice_agent.knowledge import load_retriever
+    from clinic_voice_agent.scheduling import Calendar, seed_demo
+    from clinic_voice_agent.tools import ToolExecutor
+    from clinic_voice_agent.voice import run_call, speech_backend
+
+    argparse.ArgumentParser(description=mic_main.__doc__).parse_args(argv)
+    load_env()
+    try:
+        from pipecat.transports.local.audio import (
+            LocalAudioTransport,
+            LocalAudioTransportParams,
+        )
+    except ImportError:
+        print("Microphone mode needs PortAudio and pyaudio: brew install portaudio && "
+              "uv pip install pyaudio")
+        return 2
+    cfg = load_clinic_config()
+    calendar = Calendar(cfg)
+    seed_demo(calendar)
+    transport = LocalAudioTransport(LocalAudioTransportParams(
+        audio_in_enabled=True, audio_out_enabled=True))
+    print(f"Speech: {speech_backend()}. Speak after the greeting; Ctrl+C to hang up.")
+    asyncio.run(run_call(transport, cfg, ToolExecutor(cfg, calendar, load_retriever()),
+                         sample_rate=16000, handle_sigint=True, local=True))
+    return 0
+
+
+def plots_main(argv: list[str] | None = None) -> int:
+    """Latency analysis + figures from the saved reports (no API calls)."""
+    from clinic_voice_agent.config import REPORTS_DIR
+    from clinic_voice_agent.plots import analyse, make_figures, write_analysis
+
+    parser = argparse.ArgumentParser(description=plots_main.__doc__)
+    parser.add_argument("--reports", default=str(REPORTS_DIR))
+    args = parser.parse_args(argv)
+    reports = Path(args.reports)
+    result = analyse(reports)
+    write_analysis(result, reports)
+    for path in make_figures(result, reports):
+        print(f"wrote {path}")
+    return 0
+
+
 def phone_sim_main(argv: list[str] | None = None) -> int:
     """Fake-Twilio calls into the real /media endpoint; writes reports/phone_sim.*"""
     import asyncio
@@ -244,9 +344,13 @@ def phone_sim_main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=phone_sim_main.__doc__)
     parser.add_argument("--per-label", type=int, default=6)
     parser.add_argument("--port", type=int, default=8799)
+    parser.add_argument("--speech", choices=("deepgram", "local"), default="deepgram",
+                        help="Speech stages inside the server (the caller audio and the check of "
+                             "the reply always use Deepgram)")
     parser.add_argument("--out", default=str(REPORTS_DIR))
     args = parser.parse_args(argv)
     load_env()
+    os.environ["CVA_SPEECH"] = args.speech
     if not stage_ready("stt"):
         print("DEEPGRAM_API_KEY is not set (add it to .env).")
         return 2
@@ -258,6 +362,6 @@ def phone_sim_main(argv: list[str] | None = None) -> int:
     rows = asyncio.run(run_sim(items, args.port, OUTPUTS_DIR / "speech_cache",
                                os.environ["DEEPGRAM_API_KEY"]))
     summary = summarise(rows)
-    write_report(rows, summary, Path(args.out))
+    write_report(rows, summary, Path(args.out), args.speech)
     print(summary)
     return 0

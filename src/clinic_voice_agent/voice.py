@@ -8,6 +8,11 @@ user aggregator lets the caller interrupt the bot (barge-in). `GuardrailGate` sc
 final transcript before it reaches the context: emergencies and medical-advice requests are
 answered with the fixed scripts and never reach Claude, exactly as in text mode.
 
+Without a Deepgram key (or with CVA_SPEECH=local) the speech stages run on the machine:
+Silero VAD segments the audio, faster-whisper (`base.en`, int8 on the CPU) transcribes each
+segment, and Kokoro speaks the replies. Turn-taking is then plain VAD silence, not Flux's
+semantic end-of-turn.
+
 Tools use the same `ToolExecutor` as the text harness. Pipecat's portable tool schema has no
 `strict` flag, so here the executor's own validation is the only argument check.
 
@@ -27,12 +32,58 @@ from clinic_voice_agent.tools import ToolExecutor, build_tool_specs
 
 TTS_VOICE = "aura-2-thalia-en"
 FLUX_MODEL = "flux-general-en"
+LOCAL_WHISPER = "base.en"
+LOCAL_VOICE = "af_heart"
 GREETING = "Hello, you've reached {name}. This is the automated receptionist. How can I help?"
 
 
 def voice_system_prompt(cfg: ClinicConfig, now) -> str:
     base = SYSTEM_PROMPT.format(name=cfg.name, address=cfg.address, emergency=cfg.emergency_number)
     return base + f"\nCurrent local time at the clinic: {now:%A %d %B %Y, %H:%M} ({now:%Y-%m-%d})."
+
+
+def speech_backend(env=os.environ) -> str:
+    """'deepgram' or 'local'. CVA_SPEECH forces one; otherwise Deepgram when its key is set."""
+    forced = env.get("CVA_SPEECH", "").strip().lower()
+    if forced in ("deepgram", "local"):
+        if forced == "deepgram" and not env.get("DEEPGRAM_API_KEY"):
+            raise RuntimeError("CVA_SPEECH=deepgram but DEEPGRAM_API_KEY is not set")
+        return forced
+    return "deepgram" if env.get("DEEPGRAM_API_KEY") else "local"
+
+
+def speech_services(env=os.environ):
+    """(VAD processor or None, STT, TTS, aggregator VAD analyzer or None) for the backend."""
+    from pipecat.audio.vad.silero import SileroVADAnalyzer
+
+    if speech_backend(env) == "deepgram":
+        from pipecat.services.deepgram.flux.stt import DeepgramFluxSTTService
+        from pipecat.services.deepgram.tts import DeepgramTTSService
+
+        stt = DeepgramFluxSTTService(
+            api_key=env["DEEPGRAM_API_KEY"],
+            settings=DeepgramFluxSTTService.Settings(model=FLUX_MODEL),
+        )
+        tts = DeepgramTTSService(
+            api_key=env["DEEPGRAM_API_KEY"], settings=DeepgramTTSService.Settings(voice=TTS_VOICE)
+        )
+        # Flux finds the end of turn itself; VAD in the aggregator only handles barge-in.
+        return None, stt, tts, SileroVADAnalyzer()
+
+    from pipecat.processors.audio.vad_processor import VADProcessor
+    from pipecat.services.kokoro.tts import KokoroTTSService
+    from pipecat.services.whisper.stt import WhisperSTTService
+
+    from clinic_voice_agent.config import ROOT
+    from clinic_voice_agent.local_speech import kokoro_paths
+
+    model, voices = kokoro_paths(ROOT / "models")
+    stt = WhisperSTTService(device="cpu", compute_type="int8",
+                            settings=WhisperSTTService.Settings(model=LOCAL_WHISPER))
+    tts = KokoroTTSService(model_path=str(model), voices_path=str(voices),
+                           settings=KokoroTTSService.Settings(voice=LOCAL_VOICE))
+    # Whisper transcribes whole segments, so VAD must run before it, not in the aggregator.
+    return VADProcessor(vad_analyzer=SileroVADAnalyzer()), stt, tts, None
 
 
 def guardrail_reply(text: str, cfg: ClinicConfig) -> tuple[str, str] | None:
@@ -89,7 +140,6 @@ def make_guardrail_gate(cfg: ClinicConfig, context, executor: ToolExecutor, even
 
 def build_pipeline(transport, cfg: ClinicConfig, executor: ToolExecutor, env=os.environ):
     """Assemble the Pipecat pipeline for one call. Returns (pipeline, context, events)."""
-    from pipecat.audio.vad.silero import SileroVADAnalyzer
     from pipecat.pipeline.pipeline import Pipeline
     from pipecat.processors.aggregators.llm_context import LLMContext
     from pipecat.processors.aggregators.llm_response_universal import (
@@ -97,17 +147,9 @@ def build_pipeline(transport, cfg: ClinicConfig, executor: ToolExecutor, env=os.
         LLMUserAggregatorParams,
     )
     from pipecat.services.anthropic.llm import AnthropicLLMService
-    from pipecat.services.deepgram.flux.stt import DeepgramFluxSTTService
-    from pipecat.services.deepgram.tts import DeepgramTTSService
     from pipecat.services.llm_service import FunctionCallParams
 
-    stt = DeepgramFluxSTTService(
-        api_key=env["DEEPGRAM_API_KEY"],
-        settings=DeepgramFluxSTTService.Settings(model=FLUX_MODEL),
-    )
-    tts = DeepgramTTSService(
-        api_key=env["DEEPGRAM_API_KEY"], settings=DeepgramTTSService.Settings(voice=TTS_VOICE)
-    )
+    vad, stt, tts, aggregator_vad = speech_services(env)
     # Without a key the pipeline still runs: greetings and the scripted guardrail replies work,
     # but every turn that needs Claude fails (that is how `cva-phone-sim` tests the safety path).
     llm = AnthropicLLMService(
@@ -128,13 +170,14 @@ def build_pipeline(transport, cfg: ClinicConfig, executor: ToolExecutor, env=os.
 
     context = LLMContext(tools=function_schemas(cfg))
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
-        context, user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer())
+        context, user_params=LLMUserAggregatorParams(vad_analyzer=aggregator_vad)
     )
     events: list[dict[str, Any]] = []
     gate = make_guardrail_gate(cfg, context, executor, events)
     pipeline = Pipeline(
         [
             transport.input(),
+            *([vad] if vad else []),
             stt,
             gate,
             user_aggregator,
@@ -148,8 +191,12 @@ def build_pipeline(transport, cfg: ClinicConfig, executor: ToolExecutor, env=os.
 
 
 async def run_call(transport, cfg: ClinicConfig, executor: ToolExecutor, sample_rate: int,
-                   handle_sigint: bool = False) -> list[dict[str, Any]]:
-    """Run one call until the caller hangs up; returns the guardrail events."""
+                   handle_sigint: bool = False, local: bool = False) -> list[dict[str, Any]]:
+    """Run one call until the caller hangs up; returns the guardrail events.
+
+    `local=True` is the microphone mode: there is no client to connect, so the greeting is
+    queued straight away and the call ends with Ctrl+C.
+    """
     from pipecat.frames.frames import TTSSpeakFrame
     from pipecat.pipeline.worker import PipelineParams, PipelineWorker
     from pipecat.workers.runner import WorkerRunner
@@ -167,13 +214,18 @@ async def run_call(transport, cfg: ClinicConfig, executor: ToolExecutor, sample_
     runner = WorkerRunner(handle_sigint=handle_sigint)
     await runner.add_workers(worker)
 
-    @transport.event_handler("on_client_connected")
-    async def on_client_connected(transport, client):
-        await worker.queue_frames([TTSSpeakFrame(GREETING.format(name=cfg.name))])
+    greeting = TTSSpeakFrame(GREETING.format(name=cfg.name))
+    if local:
+        await worker.queue_frames([greeting])
+    else:
 
-    @transport.event_handler("on_client_disconnected")
-    async def on_client_disconnected(transport, client):
-        await runner.cancel()
+        @transport.event_handler("on_client_connected")
+        async def on_client_connected(transport, client):
+            await worker.queue_frames([greeting])
+
+        @transport.event_handler("on_client_disconnected")
+        async def on_client_disconnected(transport, client):
+            await runner.cancel()
 
     await runner.run()
     return events

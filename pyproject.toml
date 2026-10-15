@@ -25,6 +25,9 @@ voice = [
     "python-multipart>=0.0.9",
     "httpx>=0.27",
 ]
+# Offline fallback: faster-whisper STT and Kokoro TTS (model files download on first use).
+local = ["pipecat-ai[whisper,kokoro]>=1.12", "soxr>=0.5", "numpy>=1.26"]
+plots = ["matplotlib>=3.8"]
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
@@ -38,6 +41,10 @@ cva-eval-calls = "clinic_voice_agent.cli:eval_calls_main"
 cva-speech-eval = "clinic_voice_agent.cli:speech_eval_main"
 cva-serve = "clinic_voice_agent.server:main"
 cva-phone-sim = "clinic_voice_agent.cli:phone_sim_main"
+cva-flux-sweep = "clinic_voice_agent.cli:flux_sweep_main"
+cva-local-speech-eval = "clinic_voice_agent.cli:local_speech_eval_main"
+cva-plots = "clinic_voice_agent.cli:plots_main"
+cva-mic = "clinic_voice_agent.cli:mic_main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -28,6 +28,21 @@ def mulaw_to_pcm16(data: bytes) -> bytes:
     return struct.pack(f"<{len(data)}h", *(_MULAW_TABLE[b] for b in data))
 
 
+def _linear_to_mulaw(sample: int) -> int:
+    # G.711 encoder: clip, add the bias, find the segment (exponent), keep 4 mantissa bits.
+    sign = 0x80 if sample < 0 else 0
+    sample = min(abs(sample), 32635) + 0x84
+    exponent = max(0, sample.bit_length() - 8)
+    mantissa = (sample >> (exponent + 3)) & 0x0F
+    return ~(sign | (exponent << 4) | mantissa) & 0xFF
+
+
+def pcm16_to_mulaw(data: bytes) -> bytes:
+    """Encode little-endian 16-bit PCM to μ-law bytes (what a phone line carries)."""
+    samples = struct.unpack(f"<{len(data) // 2}h", data)
+    return bytes(_linear_to_mulaw(s) for s in samples)
+
+
 def pcm16_duration(pcm: bytes, rate: int = PHONE_RATE) -> float:
     return len(pcm) / 2 / rate
 
