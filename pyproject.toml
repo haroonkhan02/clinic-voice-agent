@@ -26,7 +26,13 @@ voice = [
     "httpx>=0.27",
 ]
 # Offline fallback: faster-whisper STT and Kokoro TTS (model files download on first use).
-local = ["pipecat-ai[whisper,kokoro]>=1.12", "soxr>=0.5", "numpy>=1.26"]
+# Pipecat's whisper module also imports mlx-whisper on Apple silicon, so it is needed there.
+local = [
+    "pipecat-ai[whisper,kokoro]>=1.12",
+    "pipecat-ai[mlx-whisper]>=1.12; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "soxr>=0.5",
+    "numpy>=1.26",
+]
 plots = ["matplotlib>=3.8"]
 dev = ["pytest>=8", "ruff>=0.6"]
 

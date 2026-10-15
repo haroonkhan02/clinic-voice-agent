@@ -205,7 +205,10 @@ async def run_call(transport, cfg: ClinicConfig, executor: ToolExecutor, sample_
     worker = PipelineWorker(
         pipeline,
         params=PipelineParams(
-            audio_in_sample_rate=sample_rate,
+            # Whisper reads raw samples as 16 kHz, so the local path resamples phone audio up
+            # (the Twilio serializer converts 8 kHz μ-law to the pipeline's input rate).
+            audio_in_sample_rate=max(sample_rate, 16000) if speech_backend() == "local"
+            else sample_rate,
             audio_out_sample_rate=sample_rate,
             enable_metrics=True,  # per-service TTFB / processing time in the logs
             enable_usage_metrics=True,

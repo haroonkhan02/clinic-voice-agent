@@ -360,7 +360,8 @@ def phone_sim_main(argv: list[str] | None = None) -> int:
             counts[label] = counts.get(label, 0) + 1
             items.append((text, label))
     rows = asyncio.run(run_sim(items, args.port, OUTPUTS_DIR / "speech_cache",
-                               os.environ["DEEPGRAM_API_KEY"]))
+                               os.environ["DEEPGRAM_API_KEY"],
+                               greeting_gap_s=1.2 if args.speech == "deepgram" else 3.0))
     summary = summarise(rows)
     write_report(rows, summary, Path(args.out), args.speech)
     print(summary)
