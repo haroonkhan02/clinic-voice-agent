@@ -126,17 +126,22 @@ def transcribe_batch(client, ulaw: bytes) -> tuple[str, float]:
     return alt["transcript"], latency
 
 
-async def transcribe_flux(pcm: bytes, key: str, max_silence_s: float = 6.0):
+async def transcribe_flux(pcm: bytes, key: str, max_silence_s: float = 6.0,
+                          params: dict[str, Any] | None = None):
     """Stream PCM at real-time pace, like a phone line, and follow Flux's turns.
 
     Returns (transcript of all turns, seconds from end of speech to the final EndOfTurn,
     number of EndOfTurn events that arrived while the caller was still speaking). A premature
-    EndOfTurn is what makes a live bot answer in the middle of a sentence.
+    EndOfTurn is what makes a live bot answer in the middle of a sentence. `params` are extra
+    Flux query parameters, e.g. {"eot_threshold": 0.8}.
     """
+    from urllib.parse import urlencode
+
     import websockets
 
-    url = (f"wss://api.deepgram.com/v2/listen?model={FLUX_MODEL}&encoding=linear16"
-           f"&sample_rate={PHONE_RATE}")
+    query = {"model": FLUX_MODEL, "encoding": "linear16", "sample_rate": PHONE_RATE,
+             **(params or {})}
+    url = f"wss://api.deepgram.com/v2/listen?{urlencode(query)}"
     chunk = PHONE_RATE * 2 * CHUNK_MS // 1000
     speech = trim_trailing_silence(pcm)
     silence = bytes(chunk)
